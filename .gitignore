@@ -1,0 +1,4 @@
+/target
+
+# Cargo.lock is committed: the MSRV (1.75) build relies on a pinned, edition-2021
+# resolution of the dependency tree, so CI builds `--locked` for reproducibility.
