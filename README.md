@@ -96,20 +96,22 @@ client
 
 ## Batch
 
-Send 1 to 100 independent messages in one request. `defaults` fills any field an entry omits.
+Send 1 to 100 independent messages in one request. `defaults` fills any field an entry omits. Build entries with `SendEmail::to(...)` to omit `from` (and any other shared field) and let `defaults` supply it; an entry that sets its own value wins.
 
 ```rust
-use anypost::BatchEmail;
+use anypost::{BatchEmail, SendEmail};
 use serde_json::json;
 
 let batch = BatchEmail::new([
-    SendEmail::new("you@yourdomain.com", ["a@example.com"]).subject("Hi A").text("..."),
-    SendEmail::new("you@yourdomain.com", ["b@example.com"]).subject("Hi B").text("..."),
+    SendEmail::to(["a@example.com"]).subject("Hi A").text("..."),
+    SendEmail::to(["b@example.com"]).subject("Hi B").text("..."),
 ])
 .defaults(json!({ "from": "you@yourdomain.com" }));
 
 let result = client.email.send_batch(&batch).await?;
 ```
+
+For a standalone send, `SendEmail::new(from, to)` is the constructor — `from` is required there. `SendEmail::to(recipients)` is its sibling for batch entries that inherit a shared sender.
 
 A batch with mixed outcomes returns HTTP `207` and resolves normally. Inspect each entry rather than treating it as an error:
 

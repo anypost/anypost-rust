@@ -135,14 +135,35 @@ async fn batch_returns_mixed_outcomes_without_raising() {
 }
 
 #[tokio::test]
-async fn batch_defaults_are_serialized() {
+async fn batch_entries_omit_from_to_inherit_defaults() {
     let (client, transport) = client(vec![json(202, j!({"summary": {}, "data": []}))]);
-    let batch = BatchEmail::new([SendEmail::new("ignored@x.com", ["a@example.com"]).text("..")])
-        .defaults(j!({"from": "you@yourdomain.com"}));
+    // Entries built with `SendEmail::to` carry no `from`; the batch `defaults`
+    // supplies it (matching the dynamic-language SDKs).
+    let batch = BatchEmail::new([
+        SendEmail::to(["a@example.com"]).subject("Hi A").text(".."),
+        SendEmail::to(["b@example.com"]).subject("Hi B").text(".."),
+    ])
+    .defaults(j!({"from": "you@yourdomain.com"}));
+    client.email.send_batch(&batch).await.unwrap();
+
+    let body = transport.last().json();
+    assert_eq!(body["defaults"]["from"], "you@yourdomain.com");
+    // The entry omits `from` entirely so the default applies.
+    assert!(body["emails"][0].get("from").is_none());
+    assert_eq!(body["emails"][0]["to"], j!(["a@example.com"]));
+}
+
+#[tokio::test]
+async fn batch_entry_can_override_from() {
+    let (client, transport) = client(vec![json(202, j!({"summary": {}, "data": []}))]);
+    let batch = BatchEmail::new([SendEmail::to(["a@example.com"])
+        .from("override@example.com")
+        .text("..")])
+    .defaults(j!({"from": "you@yourdomain.com"}));
     client.email.send_batch(&batch).await.unwrap();
 
     assert_eq!(
-        transport.last().json()["defaults"]["from"],
-        "you@yourdomain.com"
+        transport.last().json()["emails"][0]["from"],
+        "override@example.com"
     );
 }

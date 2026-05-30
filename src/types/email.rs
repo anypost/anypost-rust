@@ -125,11 +125,16 @@ fn serialize_base64<S: Serializer>(bytes: &[u8], serializer: S) -> Result<S::Ok,
 
 /// A single message. Build it with [`SendEmail::new`] and chain setters.
 ///
-/// `from` and `to` are required; one of `text`, `html`, or `template_id` must
-/// also be set (enforced by the API).
+/// `from` and `to` are required for a standalone send; one of `text`, `html`,
+/// or `template_id` must also be set (enforced by the API). As a batch entry
+/// (see [`BatchEmail`]), `from` may be omitted to inherit the batch
+/// `defaults` — build those entries with [`SendEmail::to`].
 #[derive(Clone, Debug, Serialize)]
 pub struct SendEmail {
-    pub from: String,
+    /// The sender. Required for a standalone send; omit on a batch entry to
+    /// inherit `defaults.from`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
     pub to: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub cc: Vec<String>,
@@ -164,10 +169,22 @@ pub struct SendEmail {
 }
 
 impl SendEmail {
-    /// Start a message with the required sender and recipients.
+    /// Start a message with the required sender and recipients. This is the
+    /// constructor for a standalone [`send`](crate::Email::send).
     pub fn new(from: impl Into<String>, to: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        Self::recipients(to).from(from)
+    }
+
+    /// Start a batch entry with only recipients, leaving `from` unset so it
+    /// inherits the batch `defaults` (see [`BatchEmail::defaults`]). Pair this
+    /// with [`SendEmail::from`] if a particular entry needs its own sender.
+    pub fn to(to: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        Self::recipients(to)
+    }
+
+    fn recipients(to: impl IntoIterator<Item = impl Into<String>>) -> Self {
         Self {
-            from: from.into(),
+            from: None,
             to: to.into_iter().map(Into::into).collect(),
             cc: Vec::new(),
             bcc: Vec::new(),
@@ -185,6 +202,13 @@ impl SendEmail {
             topic: None,
             unsubscribe: None,
         }
+    }
+
+    /// Set the sender. Usually supplied via [`SendEmail::new`]; use this to add
+    /// a sender to a batch entry built with [`SendEmail::to`].
+    pub fn from(mut self, from: impl Into<String>) -> Self {
+        self.from = Some(from.into());
+        self
     }
 
     pub fn cc(mut self, addrs: impl IntoIterator<Item = impl Into<String>>) -> Self {
