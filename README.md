@@ -2,7 +2,7 @@
 
 The official Rust crate for the [Anypost](https://anypost.com) email API.
 
-Requires Rust 1.75+. Async by default, built on [reqwest](https://docs.rs/reqwest) and [Tokio](https://tokio.rs). A synchronous client is available behind the `blocking` feature.
+Requires Rust 1.82+. Async by default, built on [reqwest](https://docs.rs/reqwest) and [Tokio](https://tokio.rs). A synchronous client is available behind the `blocking` feature.
 
 ## Install
 
