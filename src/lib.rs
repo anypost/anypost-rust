@@ -28,6 +28,12 @@
 //! Keep the API key server-side. It is a bearer credential.
 
 #![forbid(unsafe_code)]
+// Our `Error` enum carries a full `ApiError` (rich response body) by value in
+// most variants, which trips clippy's `result_large_err` (>128-byte Err). That
+// payload is deliberate — callers read structured error detail directly — and
+// errors are off the hot path, so boxing every variant to shave stack bytes
+// would churn the public API for no real gain. Accept the larger `Result`.
+#![allow(clippy::result_large_err)]
 
 mod client;
 mod error;
