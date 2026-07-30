@@ -164,6 +164,15 @@ pub struct SendEmail {
     pub campaign: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub topic: Option<String>,
+    /// Which of your dedicated IP pools this message sends from
+    /// (`[a-z0-9]([a-z0-9-]*[a-z0-9])?`, at most 32 chars). Accounts with
+    /// dedicated IPs and more than one named pool only. Unlike `tags`, `topic`
+    /// and `campaign` this is not a reporting label: it changes how the message
+    /// is delivered, keeping one stream's reputation and queueing off another's.
+    /// Leave unset to use the account's default pool; an unrecognized name
+    /// returns `422` listing the pools the account does have.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ip_pool: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unsubscribe: Option<Unsubscribe>,
 }
@@ -200,6 +209,7 @@ impl SendEmail {
             variables: None,
             campaign: None,
             topic: None,
+            ip_pool: None,
             unsubscribe: None,
         }
     }
@@ -312,6 +322,13 @@ impl SendEmail {
 
     pub fn topic(mut self, topic: impl Into<String>) -> Self {
         self.topic = Some(topic.into());
+        self
+    }
+
+    /// Route this message through one of your dedicated IP pools. See
+    /// [`SendEmail::ip_pool`](struct.SendEmail.html#structfield.ip_pool).
+    pub fn ip_pool(mut self, ip_pool: impl Into<String>) -> Self {
+        self.ip_pool = Some(ip_pool.into());
         self
     }
 

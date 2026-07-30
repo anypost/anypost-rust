@@ -33,6 +33,25 @@ async fn list_threads_event_type_and_tags() {
 }
 
 #[tokio::test]
+async fn list_threads_ip_pool() {
+    let (client, transport) = client(vec![json(
+        200,
+        j!({"data": [], "has_more": false, "next_cursor": null}),
+    )]);
+
+    client
+        .events
+        .list(EventListParams::new().ip_pool("marketing"))
+        .await
+        .unwrap();
+
+    assert_eq!(
+        transport.last().query("ip_pool").as_deref(),
+        Some("marketing")
+    );
+}
+
+#[tokio::test]
 async fn exposes_bot_on_proxied_open() {
     let (client, _) = client(vec![json(
         200,

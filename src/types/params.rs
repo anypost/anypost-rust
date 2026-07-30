@@ -88,6 +88,11 @@ pub struct EventListParams {
     pub topic: Option<String>,
     pub campaign: Option<String>,
     pub template_id: Option<String>,
+    /// Restrict to mail that egressed from this named dedicated IP pool. Exact
+    /// match against the `[a-z0-9]([a-z0-9-]*[a-z0-9])?` pool-name shape; a
+    /// value outside it returns an empty list rather than being ignored, so a
+    /// typo cannot silently widen the answer to "all pools".
+    pub ip_pool: Option<String>,
     /// Matched with `hasAny`: an event carrying any of these tags matches.
     pub tags: Vec<String>,
 }
@@ -154,6 +159,11 @@ impl EventListParams {
 
     pub fn template_id(mut self, template_id: impl Into<String>) -> Self {
         self.template_id = Some(template_id.into());
+        self
+    }
+
+    pub fn ip_pool(mut self, ip_pool: impl Into<String>) -> Self {
+        self.ip_pool = Some(ip_pool.into());
         self
     }
 

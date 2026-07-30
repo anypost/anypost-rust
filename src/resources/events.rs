@@ -48,6 +48,7 @@ impl Events {
             ("topic", params.topic),
             ("campaign", params.campaign),
             ("template_id", params.template_id),
+            ("ip_pool", params.ip_pool),
             ("tags", tags),
         ]
     }
