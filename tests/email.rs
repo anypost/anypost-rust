@@ -105,6 +105,54 @@ async fn attachments_are_base64_encoded() {
 }
 
 #[tokio::test]
+async fn base64_attachment_content_is_sent_unchanged() {
+    let (client, transport) = client(vec![json(202, j!({"id": "email_1"}))]);
+    client
+        .email
+        .send(
+            &SendEmail::new("you@x.com", ["a@example.com"])
+                .subject("Report")
+                .text("Attached.")
+                .attachment(
+                    Attachment::from_base64("hello.txt", "aGVsbG8=").content_type("text/plain"),
+                ),
+        )
+        .await
+        .unwrap();
+
+    let body = transport.last().json();
+    let attachment = &body["attachments"][0];
+    assert_eq!(attachment["content"], "aGVsbG8=");
+    assert_eq!(attachment["content_type"], "text/plain");
+    // The wire object carries only `content` — the enum does not leak a tag.
+    assert!(attachment.get("content_base64").is_none());
+    assert!(attachment["content"].is_string());
+}
+
+#[tokio::test]
+async fn inline_base64_attachment_carries_its_content_id() {
+    let (client, transport) = client(vec![json(202, j!({"id": "email_1"}))]);
+    client
+        .email
+        .send(
+            &SendEmail::new("you@x.com", ["a@example.com"])
+                .subject("Report")
+                .html("<img src=\"cid:logo\">")
+                .attachment(
+                    Attachment::from_base64("logo.png", "cG5n")
+                        .content_type("image/png")
+                        .content_id("logo"),
+                ),
+        )
+        .await
+        .unwrap();
+
+    let attachment = &transport.last().json()["attachments"][0];
+    assert_eq!(attachment["content"], "cG5n");
+    assert_eq!(attachment["content_id"], "logo");
+}
+
+#[tokio::test]
 async fn batch_returns_mixed_outcomes_without_raising() {
     let response = j!({
         "summary": {"total": 2, "queued": 1, "failed": 1},

@@ -1,8 +1,9 @@
 //! Typed builders for the send endpoints.
 //!
 //! Build a [`SendEmail`] with [`SendEmail::new`] and chain setters; pass it to
-//! [`Email::send`](crate::Email::send). Attachment `content` is the raw file
-//! bytes — the SDK base64-encodes it on the wire. Do not pre-encode it.
+//! [`Email::send`](crate::Email::send). Attachment `content` takes either raw
+//! file bytes, which the SDK base64-encodes on the wire, or an already-encoded
+//! base64 string via [`Attachment::from_base64`].
 
 use std::collections::BTreeMap;
 
@@ -84,12 +85,37 @@ impl Unsubscribe {
     }
 }
 
-/// An inline attachment. `content` is raw bytes; it is base64-encoded on the wire.
+/// The content of an [`Attachment`], in whichever form the caller already has it.
+///
+/// The wire format is always base64. [`Bytes`](AttachmentContent::Bytes) is
+/// encoded on the way out; [`Base64`](AttachmentContent::Base64) is content that
+/// is already base64 at rest and is sent through verbatim, so nothing is decoded
+/// just to be re-encoded.
+#[derive(Clone, Debug)]
+pub enum AttachmentContent {
+    /// Raw file bytes (e.g. `std::fs::read("report.pdf")?`); base64-encoded on the wire.
+    Bytes(Vec<u8>),
+    /// Already-base64-encoded content, sent verbatim.
+    Base64(String),
+}
+
+impl Serialize for AttachmentContent {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Bytes(bytes) => {
+                serializer.serialize_str(&base64::engine::general_purpose::STANDARD.encode(bytes))
+            }
+            Self::Base64(encoded) => serializer.serialize_str(encoded),
+        }
+    }
+}
+
+/// An inline attachment. `content` carries either raw bytes or already-encoded
+/// base64; the wire form is base64 either way.
 #[derive(Clone, Debug, Serialize)]
 pub struct Attachment {
     pub filename: String,
-    #[serde(serialize_with = "serialize_base64")]
-    pub content: Vec<u8>,
+    pub content: AttachmentContent,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -101,7 +127,18 @@ impl Attachment {
     pub fn new(filename: impl Into<String>, content: impl Into<Vec<u8>>) -> Self {
         Self {
             filename: filename.into(),
-            content: content.into(),
+            content: AttachmentContent::Bytes(content.into()),
+            content_type: None,
+            content_id: None,
+        }
+    }
+
+    /// Create an attachment from content that is already base64-encoded. Use this
+    /// when the data is stored encoded — it avoids decoding only to re-encode.
+    pub fn from_base64(filename: impl Into<String>, content: impl Into<String>) -> Self {
+        Self {
+            filename: filename.into(),
+            content: AttachmentContent::Base64(content.into()),
             content_type: None,
             content_id: None,
         }
@@ -117,10 +154,6 @@ impl Attachment {
         self.content_id = Some(content_id.into());
         self
     }
-}
-
-fn serialize_base64<S: Serializer>(bytes: &[u8], serializer: S) -> Result<S::Ok, S::Error> {
-    serializer.serialize_str(&base64::engine::general_purpose::STANDARD.encode(bytes))
 }
 
 /// A single message. Build it with [`SendEmail::new`] and chain setters.

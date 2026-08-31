@@ -57,7 +57,8 @@ pub use version::VERSION;
 pub use resources::{ApiKeys, Domains, Email, Events, Identity, Suppressions, Templates, Webhooks};
 
 pub use types::email::{
-    Attachment, BatchEmail, ReplyTo, SendEmail, Tracking, Unsubscribe, UnsubscribeMode,
+    Attachment, AttachmentContent, BatchEmail, ReplyTo, SendEmail, Tracking, Unsubscribe,
+    UnsubscribeMode,
 };
 pub use types::params::{EventListParams, ListParams, SuppressionListParams};
 

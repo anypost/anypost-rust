@@ -65,7 +65,7 @@ client
     .await?;
 ```
 
-Attachment `content` is the raw file bytes: pass what `std::fs::read` returns and the SDK base64-encodes it. Do not pre-encode it. The request body is capped at 5 MB.
+`Attachment::new` takes the raw file bytes: pass what `std::fs::read` returns and the SDK base64-encodes them. When the content is already base64 at rest, use `Attachment::from_base64` instead — that string is sent verbatim, so nothing is decoded just to be re-encoded. The request body is capped at 5 MB.
 
 ```rust
 use anypost::Attachment;
