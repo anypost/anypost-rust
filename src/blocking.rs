@@ -327,6 +327,12 @@ impl Suppressions<'_> {
             .block_on(self.client.inner.suppressions.create(body))
     }
 
+    pub fn create_batch(&self, items: impl Serialize) -> Result<Response> {
+        self.client
+            .runtime
+            .block_on(self.client.inner.suppressions.create_batch(items))
+    }
+
     pub fn get(&self, email: &str, topic: &str) -> Result<Response> {
         self.client
             .runtime

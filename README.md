@@ -205,6 +205,22 @@ client
 client.suppressions.delete("alice@example.com", "marketing").await?;
 ```
 
+Add up to 1,000 suppressions per call with `create_batch`:
+
+```rust
+let result = client
+    .suppressions
+    .create_batch(json!([
+        { "email": "alice@example.com", "topic": "marketing" },
+        { "email": "bob@example.com", "reason": "hard bounce" },
+    ]))
+    .await?;
+
+println!("{} imported, {} already suppressed", result["imported"], result["already_suppressed"]);
+```
+
+Addresses that are already suppressed are counted in `already_suppressed` and left unchanged, so a batch is safe to retry. Invalid addresses come back in `invalid` (with their `index` and `email`) instead of failing the batch, and a batch that would pass your suppression limit raises `validation_error`.
+
 `get`, `list` (with `email_contains`, `topic`, `reason`, and `origin` filters via `SuppressionListParams`), `list_for_email`, and `delete_for_email` round out the resource. See [Suppressions](https://anypost.com/docs/reference/suppressions) for scoping and the automatic-suppression rules for bounces and complaints.
 
 ## Webhooks
