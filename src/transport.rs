@@ -47,6 +47,8 @@ pub struct TransportError {
 /// Performs a single HTTP round-trip. Implement this to swap in a custom HTTP
 /// stack; the default is [`reqwest`].
 #[async_trait]
+// Newer clippy flags the `#[must_use]` async_trait puts on the boxed future.
+#[allow(clippy::double_must_use)]
 pub trait Transport: Send + Sync {
     async fn execute(&self, request: HttpRequest) -> Result<HttpResponse, TransportError>;
 }
@@ -54,6 +56,8 @@ pub trait Transport: Send + Sync {
 /// The clock the retry loop sleeps against, and the jitter source for backoff.
 /// The default sleeps on the Tokio timer; tests inject a no-op.
 #[async_trait]
+// Newer clippy flags the `#[must_use]` async_trait puts on the boxed future.
+#[allow(clippy::double_must_use)]
 pub trait Sleeper: Send + Sync {
     async fn sleep(&self, duration: Duration);
     /// A value in `[0, 1)` used as the full-jitter factor for one backoff.
