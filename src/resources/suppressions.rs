@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use serde::Serialize;
+use serde_json::json;
 
 use crate::error::Result;
 use crate::http::HttpClient;
@@ -19,7 +20,7 @@ impl Suppressions {
         Self { http }
     }
 
-    /// List the team's suppressions, newest-first. Expired rows are filtered out.
+    /// List the team's suppressions, newest-first.
     pub async fn list(&self, params: SuppressionListParams) -> Result<Page> {
         self.http.list("/suppressions", Self::query(params)).await
     }
@@ -39,6 +40,26 @@ impl Suppressions {
                 Method::Post,
                 "/suppressions",
                 Some(to_value(body)?),
+                false,
+                None,
+            )
+            .await
+    }
+
+    /// Add up to 1,000 suppressions in one call. `items` is the list of entries
+    /// (each `{ "email", "topic"?, "reason"?, "note"? }`); the SDK wraps it in
+    /// `{ "suppressions": [...] }`. Returns `imported`, `already_suppressed`, and
+    /// `invalid`. Entries already suppressed are counted in `already_suppressed`
+    /// and left unchanged, so a batch is safe to retry. Invalid addresses come
+    /// back in `invalid` (with their `index` and `email`) instead of failing the
+    /// batch. Raises `validation_error` (422) if the batch would pass the team's
+    /// suppression limit; nothing is added in that case.
+    pub async fn create_batch(&self, items: impl Serialize) -> Result<Response> {
+        self.http
+            .request_object(
+                Method::Post,
+                "/suppressions/batch",
+                Some(json!({ "suppressions": to_value(items)? })),
                 false,
                 None,
             )
